@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Reorder Assistant</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --panel: #ffffff; --text: #18202b; --muted: #5f6b7a; --line: #e2e7ee;
+    --accent: #0b5cad; --accent-soft: #e7f0fb; --user: #0b5cad; --user-text: #ffffff;
+    --code: #f1f3f6;
+    --out: #b42318; --out-bg: #fde8e7; --crit: #c4320a; --crit-bg: #fff0e6;
+    --reo: #a15c07; --reo-bg: #fff6dd; --watch: #175cd3; --watch-bg: #e8f0ff;
+    --safe: #067647; --safe-bg: #e3f6ec; --rev: #475467; --rev-bg: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b; --panel: #161d27; --text: #e6ebf2; --muted: #95a1b2; --line: #273141;
+      --accent: #5aa2ee; --accent-soft: #1a2a3d; --user: #2f6fb5; --user-text: #ffffff; --code: #1d2633;
+      --out: #ff8a80; --out-bg: #3a1716; --crit: #ffab70; --crit-bg: #3a2312;
+      --reo: #f5c451; --reo-bg: #352a10; --watch: #8fb8ff; --watch-bg: #172a47;
+      --safe: #6fdba5; --safe-bg: #123526; --rev: #b3bdcb; --rev-bg: #232c38;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+         background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 12px 20px;
+           display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .pill { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line);
+          color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .pill.ok { color: var(--safe); background: var(--safe-bg); border-color: transparent; }
+  .pill.warn { color: var(--reo); background: var(--reo-bg); border-color: transparent; }
+  main { flex: 1; overflow-y: auto; padding: 20px 16px 8px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .msg { margin-bottom: 16px; display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .bubble { background: var(--user); color: var(--user-text); padding: 10px 14px; border-radius: 14px 14px 4px 14px;
+            max-width: 75%; white-space: pre-wrap; line-height: 1.45; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+          width: 100%; overflow: hidden; }
+  .card .who { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase;
+               letter-spacing: .04em; margin-bottom: 6px; }
+  .trace { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .trace span { font-size: 11.5px; background: var(--accent-soft); color: var(--accent); padding: 2px 8px;
+                border-radius: 6px; font-family: Consolas, ui-monospace, monospace; }
+  .md { line-height: 1.55; font-size: 14.5px; }
+  .md p { margin: 6px 0; } .md ul, .md ol { margin: 6px 0; padding-left: 22px; }
+  .md code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .md h1, .md h2, .md h3 { font-size: 15px; margin: 12px 0 6px; }
+  .md blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid var(--crit); background: var(--crit-bg); }
+  .tablebox { overflow-x: auto; margin: 10px 0; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { background: var(--code); font-weight: 600; position: sticky; top: 0; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.wrapcell { white-space: normal; min-width: 240px; color: var(--muted); }
+  tbody tr:hover { background: var(--accent-soft); }
+  .ttitle { font-weight: 600; font-size: 13.5px; margin: 14px 0 4px; }
+  details > summary { cursor: pointer; color: var(--accent); font-size: 13px; margin-top: 10px; }
+  .badge { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .b-OUT_OF_STOCK { color: var(--out); background: var(--out-bg); }
+  .b-CRITICAL { color: var(--crit); background: var(--crit-bg); }
+  .b-REORDER { color: var(--reo); background: var(--reo-bg); }
+  .b-WATCH { color: var(--watch); background: var(--watch-bg); }
+  .b-SAFE { color: var(--safe); background: var(--safe-bg); }
+  .b-REVIEW { color: var(--rev); background: var(--rev-bg); }
+  .guard { font-size: 12px; margin-top: 10px; }
+  .guard.ok { color: var(--safe); } .guard.bad { color: var(--out); }
+  .error { color: var(--out); background: var(--out-bg); border-radius: 8px; padding: 10px 12px; }
+  .thinking { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px 14px; }
+  .chips { max-width: 1180px; margin: 0 auto 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px;
+          padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  form { max-width: 1180px; margin: 0 auto; display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+             font: inherit; font-size: 14.5px; background: var(--bg); color: var(--text); height: 46px; }
+  textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button.send { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 0 20px;
+                font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .welcome { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  @media (max-width: 640px) { .bubble { max-width: 90%; } header .sub { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Inventory Reorder Assistant</h1>
+  <span class="sub">Multi-agent (Google ADK) · tools over MCP · LLMs reason, tools calculate</span>
+  <span id="status" class="pill">checking…</span>
+</header>
+
+<main id="chat"><div class="wrap" id="log">
+  <div class="msg"><div class="card"><div class="who">Assistant</div>
+    <div class="welcome">Ask about the inventory in plain English. Every number comes from the reorder engine;
+    the agents decide which tool to call and explain the result. Try a suggestion below, or
+    <b>Full report (no AI)</b> for the instant deterministic answer.</div></div></div>
+</div></main>
+
+<footer>
+  <div class="chips" id="chips">
+    <button class="chip primary" data-report="1">Full report (no AI)</button>
+    <button class="chip">Show the full sorted list of all items</button>
+    <button class="chip">What should I reorder today?</button>
+    <button class="chip">Explain IT-118 (missing lead time)</button>
+    <button class="chip">What if IT-100's lead time becomes 21 days?</button>
+    <button class="chip">Are there any data problems?</button>
+    <button class="chip">Write a summary for the purchasing team</button>
+  </div>
+  <form id="form">
+    <textarea id="input" placeholder="Ask about stock, reorders, a specific item, or a what-if…"></textarea>
+    <button class="send" id="send" type="submit">Send</button>
+  </form>
+</footer>
+
+<script src="/static/marked.min.js"></script>
+<script>
+const log = document.getElementById("log");
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+let sessionId = null;
+let busy = false;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+if (window.marked) {
+  marked.use({ gfm: true, renderer: { html(token) { return esc(token.text ?? token.raw ?? ""); } } });
+}
+function md(text) {
+  const html = window.marked ? marked.parse(text || "") : `<p>${esc(text)}</p>`;
+  return html.replace(/<table>/g, '<div class="tablebox"><table>').replace(/<\/table>/g, "</table></div>")
+             .replace(/>(OUT_OF_STOCK|CRITICAL|REORDER|WATCH|SAFE|REVIEW)</g, '><span class="badge b-$1">$1</span><');
+}
+
+function scrollDown() { chat.scrollTop = chat.scrollHeight; }
+
+function addUser(text) {
+  const row = document.createElement("div");
+  row.className = "msg user";
+  row.innerHTML = `<div class="bubble">${esc(text)}</div>`;
+  log.appendChild(row); scrollDown();
+}
+
+function addCard(inner) {
+  const row = document.createElement("div");
+  row.className = "msg";
+  row.innerHTML = `<div class="card">${inner}</div>`;
+  log.appendChild(row); scrollDown();
+  return row;
+}
+
+function renderTable(t) {
+  const head = t.columns.map(c => `<th>${esc(c)}</th>`).join("");
+  const body = t.rows.map(r => "<tr>" + r.map((v, i) => {
+    if (i === t.urgency_col && v) return `<td><span class="badge b-${esc(v)}">${esc(v)}</span></td>`;
+    const isNum = typeof v === "number" || /^-?\d+(\.\d+)?$/.test(String(v));
+    const long = String(v).length > 60;
+    return `<td class="${isNum ? "num" : long ? "wrapcell" : ""}">${esc(v)}</td>`;
+  }).join("") + "</tr>").join("");
+  return `<div class="ttitle">${esc(t.title)}</div>
+          <div class="tablebox"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function renderAnswer(data) {
+  let html = `<div class="who">${esc((data.agent || "assistant").replace(/_/g, " "))}</div>`;
+  if (data.steps && data.steps.length) {
+    html += `<div class="trace">` + data.steps.map(s =>
+      `<span>${esc(s.agent)} ${s.type === "tool" ? "→ tool " : ""}${esc(s.detail)}</span>`).join("") + `</div>`;
+  }
+  html += `<div class="md">${md(data.reply)}</div>`;
+  const tables = data.tables || [];
+  if (tables.length) {
+    const replyHasTable = /\n\s*\|?\s*:?-{3,}/.test(data.reply || "");
+    const block = tables.map(renderTable).join("");
+    html += replyHasTable
+      ? `<details><summary>Verified data from the tools (${tables.length} table${tables.length > 1 ? "s" : ""})</summary>${block}</details>`
+      : block;
+  }
+  const g = data.guardrail;
+  if (g) {
+    html += g.passed
+      ? `<div class="guard ok">✓ Guardrail passed: all ${g.numbers_checked} numbers trace back to tool results</div>`
+      : `<div class="guard bad">⚠ Guardrail flagged numbers not found in tool results: ${esc(g.unverified.join(", "))}</div>`;
+  }
+  return html;
+}
+
+async function run(request, label) {
+  if (busy) return;
+  busy = true; sendBtn.disabled = true;
+  addUser(label);
+  const pending = addCard(`<div class="thinking"><span class="dot"></span>Agents are working…</div>`);
+  try {
+    const res = await request();
+    const data = await res.json();
+    if (data.session_id) sessionId = data.session_id;
+    pending.querySelector(".card").innerHTML = data.error
+      ? `<div class="who">Error</div><div class="error">${md(data.error)}</div>`
+      : renderAnswer(data);
+  } catch (e) {
+    pending.querySelector(".card").innerHTML = `<div class="error">Could not reach the server: ${esc(e.message)}</div>`;
+  } finally {
+    busy = false; sendBtn.disabled = false; input.focus(); scrollDown();
+  }
+}
+
+function ask(text) {
+  text = text.trim();
+  if (!text) return;
+  input.value = "";
+  run(() => fetch("/api/chat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, session_id: sessionId }),
+  }), text);
+}
+
+document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); ask(input.value); });
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.report) run(() => fetch("/api/report"), "Full report (no AI)");
+  else ask(b.textContent);
+});
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  const el = document.getElementById("status");
+  if (h.llm_configured) { el.textContent = `Gemini: ${h.model} · MCP: ${h.use_mcp}`; el.className = "pill ok"; }
+  else { el.textContent = "No Gemini key: use Full report (no AI)"; el.className = "pill warn"; }
+}).catch(() => {});
+input.focus();
+</script>
+</body>
+</html>

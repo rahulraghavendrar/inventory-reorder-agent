@@ -1,0 +1,26 @@
+item_code,description,on_hand,avg_daily_usage,lead_time_days,safety_stock
+IT-100,Humidity sensor HMP110,855,50.0,14,150
+IT-101,Pressure module PTB330,1608,52.2,30,365
+IT-102,Probe cable 2m,639,47.1,7,141
+IT-103,Mounting bracket,465,43.2,21,129
+IT-104,PCB main board v3,399,21.7,7,65
+IT-105,Desiccant pack,121,4.2,14,12
+IT-106,Calibration kit,875,0.0,21,77
+IT-107,Display unit,93,6.5,7,32
+IT-108,Enclosure IP66,90,5.7,7,28
+IT-109,Wind sensor bearing,795,11.0,45,33
+IT-110,Temperature probe,1272,25.1,21,125
+IT-111,Power supply 24V,1212,40.7,30,122
+IT-112,Gasket set,973,34.9,21,174
+IT-113,Data logger,-12,52.1,21,364
+IT-114,Antenna module,828,44.2,14,132
+IT-115,Connector M12,116,11.1,7,33
+IT-116,Sun shield,1031,53.2,30,159
+IT-117,Fan assembly,163,5.0,14,35
+IT-118,Battery pack,2494,25.0,,175
+IT-119,USB service cable,736,44.8,14,134
+IT-120,Firmware chip,114,11.4,14,34
+IT-121,Mast adaptor,382,30.4,14,152
+IT-122,Filter cap,965,56.7,30,283
+IT-123,Rain gauge funnel,3539,55.7,30,167
+IT-124,Label roll,1219,38.0,14,266

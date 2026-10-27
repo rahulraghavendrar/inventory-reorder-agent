@@ -1,0 +1,10 @@
+services:
+  inventory-assistant:
+    build: .
+    image: inventory-reorder-assistant:latest
+    container_name: inventory-assistant
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env          # GOOGLE_API_KEY etc. - injected at runtime, never baked into the image
+    restart: unless-stopped
